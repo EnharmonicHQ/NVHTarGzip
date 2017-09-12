@@ -379,7 +379,7 @@
     return NO;
 }
 
-- (BOOL)packFilesAndDirectoriesAtPath:(NSString *)path withTarObject:(id)object size:(unsigned long long)size error:(NSError **)error
+- (BOOL)packFilesAndDirectoriesAtPath:(NSString *)path withTarObject:(NSFileHandle *)object size:(unsigned long long)size error:(NSError **)error
 {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSDirectoryEnumerator *directoryEnumerator = [fileManager enumeratorAtPath:path];
