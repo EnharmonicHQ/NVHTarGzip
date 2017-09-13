@@ -8,6 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
+NS_ASSUME_NONNULL_BEGIN
+
+NS_SWIFT_NAME(TarGzip)
 @interface NVHTarGzip : NSObject
 
 + (NVHTarGzip *)sharedInstance;
@@ -27,5 +30,7 @@
 - (void)tarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError *))completion;
 - (void)gzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError *))completion;
 - (void)tarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError*))completion;
+
+NS_ASSUME_NONNULL_END
 
 @end
