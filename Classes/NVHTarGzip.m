@@ -134,6 +134,7 @@
                      toPath:(NSString*)destinationPath
                  completion:(void(^)(NSError *))completion {
     NSString *temporaryPath = [self temporaryFilePathForPath:sourcePath];
+
 #if defined(NO_PROGRESS) && NO_PROGRESS
     NSProgress *progress = nil;
 #else
