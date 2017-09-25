@@ -45,7 +45,11 @@
                      toPath:(NSString *)destinationPath
                       error:(NSError **)error {
     NSString *temporaryPath = [self temporaryFilePathForPath:sourcePath];
+#if defined(NO_PROGRESS) && NO_PROGRESS
+    NSProgress *progress = nil;
+#else
     NSProgress *progress = [NSProgress progressWithTotalUnitCount:2];
+#endif
     [progress becomeCurrentWithPendingUnitCount:1];
     [self unGzipFileAtPath:sourcePath toPath:temporaryPath error:error];
     [progress resignCurrent];
@@ -85,7 +89,12 @@
                    toPath:(NSString *)destinationPath
                     error:(NSError **)error {
     NSString *temporaryPath = [self temporaryFilePathForPath:sourcePath];
+    
+#if defined(NO_PROGRESS) && NO_PROGRESS
+    NSProgress *progress = nil;
+#else
     NSProgress *progress = [NSProgress progressWithTotalUnitCount:2];
+#endif
     [progress becomeCurrentWithPendingUnitCount:1];
     [self tarFileAtPath:sourcePath toPath:temporaryPath error:error];
     [progress resignCurrent];
@@ -125,7 +134,11 @@
                      toPath:(NSString*)destinationPath
                  completion:(void(^)(NSError *))completion {
     NSString *temporaryPath = [self temporaryFilePathForPath:sourcePath];
+#if defined(NO_PROGRESS) && NO_PROGRESS
+    NSProgress *progress = nil;
+#else
     NSProgress *progress = [NSProgress progressWithTotalUnitCount:2];
+#endif
     [progress becomeCurrentWithPendingUnitCount:1];
     [self unGzipFileAtPath:sourcePath toPath:temporaryPath completion:^(NSError *gzipError) {
         [progress resignCurrent];
@@ -164,7 +177,11 @@
                    toPath:(NSString *)destinationPath
                completion:(void(^)(NSError *))completion {
     NSString *temporaryPath = [self temporaryFilePathForPath:destinationPath];
+#if defined(NO_PROGRESS) && NO_PROGRESS
+    NSProgress *progress = nil;
+#else
     NSProgress *progress = [NSProgress progressWithTotalUnitCount:2];
+#endif
     [progress becomeCurrentWithPendingUnitCount:1];
     [self tarFileAtPath:sourcePath toPath:temporaryPath completion:^(NSError *tarError) {
         [progress resignCurrent];

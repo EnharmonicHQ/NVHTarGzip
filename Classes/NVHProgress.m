@@ -30,11 +30,13 @@ const int64_t NVHProgressMaxTotalUnitCount = 100;
 {
     self = [super init];
     if (!self) { return nil; }
-    
+#if defined(NO_PROGRESS) && NO_PROGRESS
+    self.progress = nil;
+#else
     self.progress = [NSProgress progressWithTotalUnitCount:NVHProgressMaxTotalUnitCount];
     self.progress.cancellable = NO;
     self.progress.pausable = NO;
-    
+#endif
     return self;
 }
 
@@ -54,3 +56,5 @@ const int64_t NVHProgressMaxTotalUnitCount = 100;
 }
 
 @end
+
+
