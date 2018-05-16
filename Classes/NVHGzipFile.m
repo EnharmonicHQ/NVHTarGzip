@@ -35,23 +35,29 @@ typedef NS_ENUM(NSInteger, NVHGzipFileErrorType)
 
 @implementation NVHGzipFile
 
-- (BOOL)inflateToPath:(NSString *)destinationPath error:(NSError **)error {
+- (BOOL)inflateToPath:(NSString *)destinationPath
+                  qos:(qos_class_t )qosClass
+                error:(NSError **)error {
     [self setupProgress];
-    return [self innerInflateToPath:destinationPath error:error];
+    return [self innerInflateToPath:destinationPath qos:(qos_class_t )qosClass error:error];
 }
 
-- (void)inflateToPath:(NSString *)destinationPath completion:(void(^)(NSError *))completion {
+- (void)inflateToPath:(NSString *)destinationPath
+                  qos:(qos_class_t )qosClass
+           completion:(void(^)(NSError *))completion {
     [self setupProgress];
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_async(dispatch_get_global_queue(qosClass, 0), ^{
         NSError *error = nil;
-        [self innerInflateToPath:destinationPath error:&error];
+        [self innerInflateToPath:destinationPath qos:(qos_class_t )qosClass error:&error];
         dispatch_async(dispatch_get_main_queue(), ^{
             completion(error);
         });
     });
 }
 
-- (BOOL)innerInflateToPath:(NSString *)destinationPath error:(NSError **)error {
+- (BOOL)innerInflateToPath:(NSString *)destinationPath
+                       qos:(qos_class_t )qosClass
+                     error:(NSError **)error {
     [self updateProgressVirtualTotalUnitCountWithFileSize];
     
     NVHGzipFileErrorType result = NVHGzipFileErrorTypeNone;
@@ -59,7 +65,7 @@ typedef NS_ENUM(NSInteger, NVHGzipFileErrorType)
     if (self.filePath && destinationPath)
     {
         [[NSFileManager defaultManager] createFileAtPath:destinationPath contents:nil attributes:nil];
-        result = [self inflateGzip:self.filePath destination:destinationPath];
+        result = [self inflateGzip:self.filePath qos:(qos_class_t )qosClass destination:destinationPath];
     }
     else
     {
@@ -98,6 +104,7 @@ typedef NS_ENUM(NSInteger, NVHGzipFileErrorType)
 }
 
 - (NSInteger)inflateGzip:(NSString *)sourcePath
+                     qos:(qos_class_t )qosClass
              destination:(NSString *)destinationPath {
     CFWriteStreamRef writeStream = (__bridge CFWriteStreamRef)[NSOutputStream outputStreamToFileAtPath:destinationPath append:NO];
     CFWriteStreamOpen(writeStream);
@@ -150,30 +157,36 @@ typedef NS_ENUM(NSInteger, NVHGzipFileErrorType)
 	return errorType;
 }
 
-- (BOOL)deflateFromPath:(NSString *)sourcePath error:(NSError **)error {
+- (BOOL)deflateFromPath:(NSString *)sourcePath
+                    qos:(qos_class_t )qosClass
+                  error:(NSError **)error {
     [self setupProgress];
-    return [self innerDeflateFromPath:sourcePath error:error];
+    return [self innerDeflateFromPath:sourcePath qos:qosClass error:error];
 }
 
-- (void)deflateFromPath:(NSString *)sourcePath completion:(void(^)(NSError *))completion {
+- (void)deflateFromPath:(NSString *)sourcePath
+                    qos:(qos_class_t )qosClass
+             completion:(void(^)(NSError *))completion {
     [self setupProgress];
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_async(dispatch_get_global_queue(qosClass, 0), ^{
         NSError *error = nil;
-        [self innerDeflateFromPath:sourcePath error:&error];
+        [self innerDeflateFromPath:sourcePath qos:qosClass error:&error];
         dispatch_async(dispatch_get_main_queue(), ^{
             completion(error);
         });
     });
 }
 
-- (BOOL)innerDeflateFromPath:(NSString *)sourcePath error:(NSError **)error {
+- (BOOL)innerDeflateFromPath:(NSString *)sourcePath
+                         qos:(qos_class_t )qosClass
+                       error:(NSError **)error {
     [self updateProgressVirtualTotalUnitCount:[[NSFileManager defaultManager] fileSizeOfItemAtPath:sourcePath]];
     
     NVHGzipFileErrorType result = NVHGzipFileErrorTypeNone;
     
     if (self.filePath && sourcePath)
     {
-        result = [self deflateToGzip:self.filePath source:sourcePath];
+        result = [self deflateToGzip:self.filePath qos:qosClass source:sourcePath];
     }
     else
     {
@@ -212,6 +225,7 @@ typedef NS_ENUM(NSInteger, NVHGzipFileErrorType)
 }
 
 - (NSInteger)deflateToGzip:(NSString *)destinationPath
+                       qos:(qos_class_t )qosClass
                     source:(NSString *)sourcePath {
     CFReadStreamRef readStream = (__bridge CFReadStreamRef)[NSInputStream inputStreamWithFileAtPath:sourcePath];
     Boolean streamOpened = CFReadStreamOpen(readStream);

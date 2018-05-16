@@ -16,20 +16,20 @@ NS_SWIFT_NAME(TarGzip)
 + (NVHTarGzip *)sharedInstance;
 
 // Sync API
-- (BOOL)unTarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath error:(NSError ** __nullable)error;
-- (BOOL)unGzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath error:(NSError ** __nullable)error;
-- (BOOL)unTarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString*)destinationPath error:(NSError ** __nullable)error;
-- (BOOL)tarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath error:(NSError ** __nullable)error;
-- (BOOL)gzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath error:(NSError ** __nullable)error;
-- (BOOL)tarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString *)destinationPath error:(NSError ** __nullable)error;
+- (BOOL)unTarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass error:(NSError ** __nullable)error;
+- (BOOL)unGzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass error:(NSError ** __nullable)error;
+- (BOOL)unTarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString*)destinationPath qos:(qos_class_t )qosClass error:(NSError ** __nullable)error;
+- (BOOL)tarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass error:(NSError ** __nullable)error;
+- (BOOL)gzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass error:(NSError ** __nullable)error;
+- (BOOL)tarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass error:(NSError ** __nullable)error;
 
 // Async API
-- (void)unTarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError * __nullable))completion;
-- (void)unGzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError * __nullable))completion;
-- (void)unTarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError * __nullable))completion;
-- (void)tarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError * __nullable))completion;
-- (void)gzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError * __nullable))completion;
-- (void)tarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString *)destinationPath completion:(void(^)(NSError* __nullable))completion;
+- (void)unTarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void(^)(NSError * __nullable))completion;
+- (void)unGzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void(^)(NSError * __nullable))completion;
+- (void)unTarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void(^)(NSError * __nullable))completion;
+- (void)tarFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void(^)(NSError * __nullable))completion;
+- (void)gzipFileAtPath:(NSString *)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void(^)(NSError * __nullable))completion;
+- (void)tarGzipFileAtPath:(NSString*)sourcePath toPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void(^)(NSError* __nullable))completion;
 
 NS_ASSUME_NONNULL_END
 

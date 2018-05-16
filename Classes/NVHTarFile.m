@@ -26,8 +26,6 @@
 // THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-
-
 #pragma mark - Definitions
 
 // Logging mode
@@ -102,23 +100,23 @@
 
 #pragma mark - Tar unpacking
 
-- (BOOL)createFilesAndDirectoriesAtPath:(NSString *)path error:(NSError **)error {
+- (BOOL)createFilesAndDirectoriesAtPath:(NSString *)path qos:(qos_class_t )qosClass error:(NSError **)error {
     [self setupProgress];
-    return [self innerCreateFilesAndDirectoriesAtPath:path error:error];
+    return [self innerCreateFilesAndDirectoriesAtPath:path qos:qosClass error:error];
 }
 
-- (void)createFilesAndDirectoriesAtPath:(NSString *)destinationPath completion:(void (^)(NSError *))completion {
+- (void)createFilesAndDirectoriesAtPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void (^)(NSError *))completion {
     [self setupProgress];
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_async(dispatch_get_global_queue(qosClass, 0), ^{
         NSError* error = nil;
-        [self innerCreateFilesAndDirectoriesAtPath:destinationPath error:&error];
+        [self innerCreateFilesAndDirectoriesAtPath:destinationPath qos:qosClass error:&error];
         dispatch_async(dispatch_get_main_queue(), ^{
             completion(error);
         });
     });
 }
 
-- (BOOL)innerCreateFilesAndDirectoriesAtPath:(NSString *)path error:(NSError **)error {
+- (BOOL)innerCreateFilesAndDirectoriesAtPath:(NSString *)path qos:(qos_class_t )qosClass error:(NSError **)error {
     [self updateProgressVirtualTotalUnitCountWithFileSize];
     BOOL result = NO;
     NSFileManager *filemanager = [NSFileManager defaultManager];
@@ -347,9 +345,9 @@
     return [self innerPackFilesAndDirectoriesAtPath:path error:error];
 }
 
-- (void)packFilesAndDirectoriesAtPath:(NSString *)sourcePath completion:(void (^)(NSError *))completion {
+- (void)packFilesAndDirectoriesAtPath:(NSString *)sourcePath qos:(qos_class_t )qosClass completion:(void (^)(NSError *))completion {
     [self setupProgress];
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    dispatch_async(dispatch_get_global_queue(qosClass, 0), ^{
         NSError* error = nil;
         [self innerPackFilesAndDirectoriesAtPath:sourcePath error:&error];
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -404,7 +402,7 @@
     return YES;
 }
 
-- (NSData *)binaryEncodeDataForPath:(NSString *) path inDirectory:(NSString *)basepath  isDirectory:(BOOL) isDirectory{
+- (NSData *)binaryEncodeDataForPath:(NSString *) path inDirectory:(NSString *)basepath isDirectory:(BOOL) isDirectory{
     
     NSMutableData *tarData;
     char block[TAR_BLOCK_SIZE];

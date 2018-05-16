@@ -11,10 +11,10 @@
 
 @interface NVHGzipFile : NVHFile
 
-- (BOOL)inflateToPath:(NSString *)destinationPath error:(NSError **)error;
-- (void)inflateToPath:(NSString *)destinationPath completion:(void(^)(NSError *))completion;
+- (BOOL)inflateToPath:(NSString *)destinationPath qos:(qos_class_t )qosClass error:(NSError **)error;
+- (void)inflateToPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void(^)(NSError *))completion;
 
-- (BOOL)deflateFromPath:(NSString *)sourcePath error:(NSError **)error;
-- (void)deflateFromPath:(NSString *)sourcePath completion:(void(^)(NSError *))completion;
+- (BOOL)deflateFromPath:(NSString *)sourcePath qos:(qos_class_t )qosClass error:(NSError **)error;
+- (void)deflateFromPath:(NSString *)sourcePath qos:(qos_class_t )qosClass completion:(void(^)(NSError *))completion;
 
 @end

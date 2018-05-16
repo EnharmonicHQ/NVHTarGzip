@@ -29,20 +29,23 @@
 
 - (BOOL)unTarFileAtPath:(NSString *)sourcePath
                  toPath:(NSString *)destinationPath
+                    qos:(qos_class_t )qosClass
                   error:(NSError **)error {
     NVHTarFile* tarFile = [[NVHTarFile alloc] initWithPath:sourcePath];
-    return [tarFile createFilesAndDirectoriesAtPath:destinationPath error:error];
+    return [tarFile createFilesAndDirectoriesAtPath:destinationPath qos:qosClass error:error];
 }
 
 - (BOOL)unGzipFileAtPath:(NSString *)sourcePath
                   toPath:(NSString *)destinationPath
+                     qos:(qos_class_t )qosClass
                    error:(NSError **)error {
     NVHGzipFile* gzipFile = [[NVHGzipFile alloc] initWithPath:sourcePath];
-    return [gzipFile inflateToPath:destinationPath error:error];
+    return [gzipFile inflateToPath:destinationPath qos:qosClass error:error];
 }
 
 - (BOOL)unTarGzipFileAtPath:(NSString *)sourcePath
                      toPath:(NSString *)destinationPath
+                        qos:(qos_class_t )qosClass
                       error:(NSError **)error {
     NSString *temporaryPath = [self temporaryFilePathForPath:sourcePath];
 #if defined(NO_PROGRESS) && NO_PROGRESS
@@ -51,13 +54,13 @@
     NSProgress *progress = [NSProgress progressWithTotalUnitCount:2];
 #endif
     [progress becomeCurrentWithPendingUnitCount:1];
-    [self unGzipFileAtPath:sourcePath toPath:temporaryPath error:error];
+    [self unGzipFileAtPath:sourcePath toPath:temporaryPath qos:qosClass error:error];
     [progress resignCurrent];
     if (*error != nil) {
         return NO;
     }
     [progress becomeCurrentWithPendingUnitCount:1];
-    [self unTarFileAtPath:temporaryPath toPath:destinationPath error:error];
+    [self unTarFileAtPath:temporaryPath toPath:destinationPath qos:qosClass error:error];
     NSError *removeTemporaryFileError = nil;
     [[NSFileManager defaultManager] removeItemAtPath:temporaryPath error:&removeTemporaryFileError];
     if (*error != nil) {
@@ -73,20 +76,23 @@
 
 - (BOOL)tarFileAtPath:(NSString *)sourcePath
                toPath:(NSString *)destinationPath
+                  qos:(qos_class_t )qosClass
                 error:(NSError **)error {
     NVHTarFile* tarFile = [[NVHTarFile alloc] initWithPath:destinationPath];
-    return [tarFile packFilesAndDirectoriesAtPath:sourcePath error:error];
+    return [tarFile packFilesAndDirectoriesAtPath:sourcePath qos:qosClass error:error];
 }
 
 - (BOOL)gzipFileAtPath:(NSString *)sourcePath
                 toPath:(NSString *)destinationPath
+                   qos:(qos_class_t )qosClass
                  error:(NSError **)error {
     NVHGzipFile* gzipFile = [[NVHGzipFile alloc] initWithPath:destinationPath];
-    return [gzipFile deflateFromPath:sourcePath error:error];
+    return [gzipFile deflateFromPath:sourcePath qos:qosClass error:error];
 }
 
 - (BOOL)tarGzipFileAtPath:(NSString *)sourcePath
                    toPath:(NSString *)destinationPath
+                      qos:(qos_class_t )qosClass
                     error:(NSError **)error {
     NSString *temporaryPath = [self temporaryFilePathForPath:sourcePath];
     
@@ -96,13 +102,13 @@
     NSProgress *progress = [NSProgress progressWithTotalUnitCount:2];
 #endif
     [progress becomeCurrentWithPendingUnitCount:1];
-    [self tarFileAtPath:sourcePath toPath:temporaryPath error:error];
+    [self tarFileAtPath:sourcePath toPath:temporaryPath qos:qosClass error:error];
     [progress resignCurrent];
     if (*error != nil) {
         return NO;
     }
     [progress becomeCurrentWithPendingUnitCount:1];
-    [self gzipFileAtPath:temporaryPath toPath:destinationPath error:error];
+    [self gzipFileAtPath:temporaryPath toPath:destinationPath qos:qosClass error:error];
     NSError* removeCacheError = nil;
     [[NSFileManager defaultManager] removeItemAtPath:temporaryPath error:&removeCacheError];
     if (*error != nil) {
@@ -118,21 +124,24 @@
 
 - (void)unTarFileAtPath:(NSString *)sourcePath
                  toPath:(NSString *)destinationPath
+                    qos:(qos_class_t )qosClass
              completion:(void(^)(NSError *))completion {
     NVHTarFile* tarFile = [[NVHTarFile alloc] initWithPath:sourcePath];
-    [tarFile createFilesAndDirectoriesAtPath:destinationPath completion:completion];
+    [tarFile createFilesAndDirectoriesAtPath:destinationPath qos:qosClass completion:completion];
 }
 
 - (void)unGzipFileAtPath:(NSString *)sourcePath
                   toPath:(NSString *)destinationPath
+                     qos:(qos_class_t )qosClass
               completion:(void(^)(NSError *))completion {
     NVHGzipFile* gzipFile = [[NVHGzipFile alloc] initWithPath:sourcePath];
-    [gzipFile inflateToPath:destinationPath completion:completion];
+    [gzipFile inflateToPath:destinationPath qos:qosClass completion:completion];
 }
 
 - (void)unTarGzipFileAtPath:(NSString*)sourcePath
-                     toPath:(NSString*)destinationPath
-                 completion:(void(^)(NSError *))completion {
+                     toPath:(NSString *)destinationPath
+                        qos:(qos_class_t )qosClass
+                 completion:(void(^)(NSError * __nullable))completion {
     NSString *temporaryPath = [self temporaryFilePathForPath:sourcePath];
 
 #if defined(NO_PROGRESS) && NO_PROGRESS
@@ -141,14 +150,14 @@
     NSProgress *progress = [NSProgress progressWithTotalUnitCount:2];
 #endif
     [progress becomeCurrentWithPendingUnitCount:1];
-    [self unGzipFileAtPath:sourcePath toPath:temporaryPath completion:^(NSError *gzipError) {
+    [self unGzipFileAtPath:sourcePath toPath:temporaryPath qos:qosClass completion:^(NSError *gzipError) {
         [progress resignCurrent];
         if (gzipError != nil) {
             completion(gzipError);
             return;
         }
         [progress becomeCurrentWithPendingUnitCount:1];
-        [self unTarFileAtPath:temporaryPath toPath:destinationPath completion:^(NSError *tarError) {
+        [self unTarFileAtPath:temporaryPath toPath:destinationPath qos:qosClass completion:^(NSError *tarError) {
             NSError* error = nil;
             [[NSFileManager defaultManager] removeItemAtPath:temporaryPath error:&error];
             [progress resignCurrent];
@@ -162,20 +171,23 @@
 
 - (void)tarFileAtPath:(NSString *)sourcePath
                toPath:(NSString *)destinationPath
+                  qos:(qos_class_t )qosClass
            completion:(void(^)(NSError *))completion {
     NVHTarFile *tarFile = [[NVHTarFile alloc] initWithPath:destinationPath];
-    [tarFile packFilesAndDirectoriesAtPath:sourcePath completion:completion];
+    [tarFile packFilesAndDirectoriesAtPath:sourcePath qos:qosClass completion:completion];
 }
 
 - (void)gzipFileAtPath:(NSString *)sourcePath
                 toPath:(NSString *)destinationPath
+                   qos:(qos_class_t )qosClass
             completion:(void(^)(NSError *))completion {
     NVHGzipFile *gzipFile = [[NVHGzipFile alloc] initWithPath:destinationPath];
-    [gzipFile deflateFromPath:sourcePath completion:completion];
+    [gzipFile deflateFromPath:sourcePath qos:qosClass completion:completion];
 }
 
 - (void)tarGzipFileAtPath:(NSString *)sourcePath
                    toPath:(NSString *)destinationPath
+                      qos:(qos_class_t )qosClass
                completion:(void(^)(NSError *))completion {
     NSString *temporaryPath = [self temporaryFilePathForPath:destinationPath];
 #if defined(NO_PROGRESS) && NO_PROGRESS
@@ -184,14 +196,14 @@
     NSProgress *progress = [NSProgress progressWithTotalUnitCount:2];
 #endif
     [progress becomeCurrentWithPendingUnitCount:1];
-    [self tarFileAtPath:sourcePath toPath:temporaryPath completion:^(NSError *tarError) {
+    [self tarFileAtPath:sourcePath toPath:temporaryPath qos:qosClass completion:^(NSError *tarError) {
         [progress resignCurrent];
         if (tarError != nil) {
             completion(tarError);
             return;
         }
         [progress becomeCurrentWithPendingUnitCount:1];
-        [self gzipFileAtPath:temporaryPath toPath:destinationPath completion:^(NSError *gzipError) {
+        [self gzipFileAtPath:temporaryPath toPath:destinationPath qos:qosClass completion:^(NSError *gzipError) {
             NSError *error = nil;
             [[NSFileManager defaultManager] removeItemAtPath:temporaryPath error:&error];
             [progress resignCurrent];

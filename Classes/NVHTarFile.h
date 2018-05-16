@@ -11,10 +11,10 @@
 
 @interface NVHTarFile : NVHFile
 
-- (BOOL)createFilesAndDirectoriesAtPath:(NSString *)destinationPath error:(NSError **)error;
-- (void)createFilesAndDirectoriesAtPath:(NSString *)destinationPath completion:(void(^)(NSError*))completion;
+- (BOOL)createFilesAndDirectoriesAtPath:(NSString *)destinationPath qos:(qos_class_t )qosClass error:(NSError **)error;
+- (void)createFilesAndDirectoriesAtPath:(NSString *)destinationPath qos:(qos_class_t )qosClass completion:(void(^)(NSError*))completion;
 
-- (BOOL)packFilesAndDirectoriesAtPath:(NSString *)sourcePath error:(NSError **)error;
-- (void)packFilesAndDirectoriesAtPath:(NSString *)sourcePath completion:(void (^)(NSError *))completion;
+- (BOOL)packFilesAndDirectoriesAtPath:(NSString *)sourcePath qos:(qos_class_t )qosClass error:(NSError **)error;
+- (void)packFilesAndDirectoriesAtPath:(NSString *)sourcePath qos:(qos_class_t )qosClass completion:(void (^)(NSError *))completion;
 
 @end
