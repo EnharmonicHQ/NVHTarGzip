@@ -339,7 +339,7 @@
 
 #pragma mark - Tar packing
 
-- (BOOL)packFilesAndDirectoriesAtPath:(NSString *)path error:(NSError **)error
+- (BOOL)packFilesAndDirectoriesAtPath:(NSString *)path qos:(qos_class_t )qosClass error:(NSError **)error
 {
     [self setupProgress];
     return [self innerPackFilesAndDirectoriesAtPath:path error:error];
