@@ -236,11 +236,12 @@ static NSOperationQueue *taskQueue;
                         }
                     }
                     NSParameterAssert(taskQueue);
+                    __weak typeof(self) weakSelf = self;
                     [taskQueue addOperationWithBlock:^{
-                        [self writeFileDataForObject:object
-                                          atLocation:(location + TAR_BLOCK_SIZE)
-                                          withLength:objectSize
-                                              atPath:filePath];
+                        [weakSelf writeFileDataForObject:object
+                                              atLocation:(location + TAR_BLOCK_SIZE)
+                                              withLength:objectSize
+                                                  atPath:filePath];
                     }];
                 }
                 break;
@@ -349,8 +350,7 @@ static NSOperationQueue *taskQueue;
                                                           contents:contents
                                                         attributes:nil]; //Write the file on filesystem
     } else if ([object isKindOfClass:[FileHandlePool class]]) {
-        NSError *writeError = nil;
-        BOOL created = [@"" writeToFile:path atomically:YES encoding:NSASCIIStringEncoding error:&writeError];
+        BOOL created = [@"" writeToFile:path atomically:YES encoding:NSASCIIStringEncoding error:nil];
         if (created) {
             NSFileHandle *destinationFile = [NSFileHandle fileHandleForWritingAtPath:path];
             object = [(FileHandlePool *)object nextHandle];
@@ -369,8 +369,6 @@ static NSOperationQueue *taskQueue;
                 [destinationFile writeData:[object readDataOfLength:(NSUInteger)length]];
             }
             [destinationFile closeFile];
-        } else {
-            NSLog(@"Error creating a file at %@ with error: %@", path, [writeError localizedDescription]);
         }
     }
     
