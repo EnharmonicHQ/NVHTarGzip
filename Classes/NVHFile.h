@@ -14,7 +14,7 @@
 @property (nonatomic, readonly) NSString *filePath;
 @property (nonatomic, assign) unsigned long long fileSize;
 
-- (instancetype)initWithPath:(NSString *)filePath;
+- (instancetype)initWithPath:(NSString *)filePath NS_DESIGNATED_INITIALIZER;
 
 - (void)setupProgress;
 - (void)updateProgressVirtualTotalUnitCountWithFileSize;

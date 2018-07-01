@@ -39,8 +39,8 @@
 #define TAR_NAME_SIZE                   100
 #define TAR_SIZE_POSITION               124
 #define TAR_SIZE_SIZE                   12
-#define TAR_MAX_BLOCK_LOAD_IN_MEMORY    100
-
+#define TAR_MAX_BLOCK_LOAD_IN_MEMORY    200
+#define TAR_MAX_CONCURRENT_TASKS        50
 
 // Define structure of POSIX 'ustar' tar header.
 // Provided by libarchive.
@@ -92,11 +92,44 @@
 #define TAR_ERROR_CODE_SOURCE_NOT_FOUND        2
 
 #import "NVHTarFile.h"
+#import "FileHandlePool.h"
+
+static NSOperationQueue *taskQueue;
+static NSMutableDictionary *fileHandlePools;
 
 @interface NVHTarFile()
+
+@property() FileHandlePool *fileHandlePool;
+
 @end
 
 @implementation NVHTarFile
+
+
++(void)initialize {
+    if (self == [NVHTarFile self])
+    {
+        taskQueue = [[NSOperationQueue alloc] init];
+        [taskQueue setQualityOfService:NSQualityOfServiceUserInitiated];
+        [taskQueue setMaxConcurrentOperationCount:TAR_MAX_CONCURRENT_TASKS];
+
+        fileHandlePools = [[NSMutableDictionary alloc] init];
+    }
+}
+
+-(instancetype) initWithPath:(NSString *)filePath {
+    self = [super initWithPath:filePath];
+    if (self) {
+        _fileHandlePool = fileHandlePools[filePath];
+        if (_fileHandlePool == nil) {
+            _fileHandlePool = [[FileHandlePool alloc] initWithFilePath:filePath handleCount:TAR_MAX_CONCURRENT_TASKS * 2];
+            fileHandlePools[filePath] = _fileHandlePool;
+        } else {
+            NSInteger x = 1; // cache hit
+        }
+    }
+    return self;
+}
 
 #pragma mark - Tar unpacking
 
@@ -117,13 +150,33 @@
 }
 
 - (BOOL)innerCreateFilesAndDirectoriesAtPath:(NSString *)path qos:(qos_class_t )qosClass error:(NSError **)error {
+    NSQualityOfService queueQOS = NSQualityOfServiceUserInteractive;
+    switch (qosClass) {
+        case QOS_CLASS_USER_INTERACTIVE:
+            queueQOS = NSQualityOfServiceUserInteractive;
+            break;
+        case QOS_CLASS_USER_INITIATED:
+            queueQOS = NSQualityOfServiceUserInitiated;
+            break;
+        case QOS_CLASS_DEFAULT:
+            queueQOS = NSQualityOfServiceDefault;
+            break;
+        case QOS_CLASS_UTILITY:
+            queueQOS = NSQualityOfServiceUtility;
+            break;
+        case QOS_CLASS_BACKGROUND:
+            queueQOS = NSQualityOfServiceBackground;
+        case QOS_CLASS_UNSPECIFIED:
+            queueQOS = NSQualityOfServiceDefault;
+        default:
+            break;
+    }
+    [taskQueue setQualityOfService:queueQOS];
     [self updateProgressVirtualTotalUnitCountWithFileSize];
     BOOL result = NO;
     NSFileManager *filemanager = [NSFileManager defaultManager];
     if (self.filePath && [filemanager fileExistsAtPath:self.filePath]) {
-        NSFileHandle *fileHandle = [NSFileHandle fileHandleForReadingAtPath:self.filePath];
-        result = [self createFilesAndDirectoriesAtPath:path withTarObject:fileHandle size:self.fileSize error:error];
-        [fileHandle closeFile];
+        result = [self createFilesAndDirectoriesAtPath:path withTarObject:self.fileHandlePool size:self.fileSize error:error];
     } else {
         NSDictionary *userInfo = @{NSLocalizedDescriptionKey: (self.filePath ? @"Source file not found" : @"Source file path is nil") };
         if (error != NULL) {
@@ -191,11 +244,13 @@
 #endif
                         }
                     }
-                    
-                    [self writeFileDataForObject:object
-                                      atLocation:(location + TAR_BLOCK_SIZE)
-                                      withLength:objectSize
-                                          atPath:filePath];
+                    NSParameterAssert(taskQueue);
+                    [taskQueue addOperationWithBlock:^{
+                        [self writeFileDataForObject:object
+                                          atLocation:(location + TAR_BLOCK_SIZE)
+                                          withLength:objectSize
+                                              atPath:filePath];
+                    }];
                 }
                 break;
             }
@@ -249,13 +304,17 @@
                 if (error != NULL) *error = [NSError errorWithDomain:TAR_ERROR_DOMAIN
                                                                 code:TAR_ERROR_CODE_BAD_BLOCK
                                                             userInfo:userInfo];
-                
+                NSParameterAssert(taskQueue);
+                [taskQueue waitUntilAllOperationsAreFinished];
                 return NO;
             }
         }
         
         location += blockCount * TAR_BLOCK_SIZE;
     }
+
+    NSParameterAssert(taskQueue);
+    [taskQueue waitUntilAllOperationsAreFinished];
     [self updateProgressVirtualCompletedUnitCountWithTotal];
     return YES;
 }
@@ -298,22 +357,25 @@
         created = [[NSFileManager defaultManager] createFileAtPath:path
                                                           contents:contents
                                                         attributes:nil]; //Write the file on filesystem
-    } else if ([object isKindOfClass:[NSFileHandle class]]) {
+    } else if ([object isKindOfClass:[FileHandlePool class]]) {
         created = [[NSFileManager defaultManager] createFileAtPath:path contents:nil attributes:nil];
         if (created) {
             NSFileHandle *destinationFile = [NSFileHandle fileHandleForWritingAtPath:path];
-            [object seekToFileOffset:location];
-            
-            unsigned long long maxSize = TAR_MAX_BLOCK_LOAD_IN_MEMORY * TAR_BLOCK_SIZE;
-            
-            while (length > maxSize) {
-                @autoreleasepool {
-                    [destinationFile writeData:[object readDataOfLength:(NSUInteger)maxSize]];
-                    location += maxSize;
-                    length -= maxSize;
+            object = [(FileHandlePool *)object nextHandle];
+            @synchronized (object) {
+                [object seekToFileOffset:location];
+
+                unsigned long long maxSize = TAR_MAX_BLOCK_LOAD_IN_MEMORY * TAR_BLOCK_SIZE;
+
+                while (length > maxSize) {
+                    @autoreleasepool {
+                        [destinationFile writeData:[object readDataOfLength:(NSUInteger)maxSize]];
+                        location += maxSize;
+                        length -= maxSize;
+                    }
                 }
+                [destinationFile writeData:[object readDataOfLength:(NSUInteger)length]];
             }
-            [destinationFile writeData:[object readDataOfLength:(NSUInteger)length]];
             [destinationFile closeFile];
         }
     }
@@ -329,9 +391,13 @@
 {
     if ([object isKindOfClass:[NSData class]]) {
         return [object subdataWithRange:range];
-    } else if ([object isKindOfClass:[NSFileHandle class]]) {
-        [object seekToFileOffset:location];
-        return [object readDataOfLength:(NSUInteger)length];
+    } else if ([object isKindOfClass:[FileHandlePool class]]) {
+            object = [(FileHandlePool *)object nextHandle];
+        @synchronized (object) {
+            [object seekToFileOffset:location];
+            NSData *data = [object readDataOfLength:(NSUInteger)length];
+            return data;
+        }
     }
     
     return nil;
