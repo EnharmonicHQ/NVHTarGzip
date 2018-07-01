@@ -40,7 +40,7 @@
 #define TAR_SIZE_POSITION               124
 #define TAR_SIZE_SIZE                   12
 #define TAR_MAX_BLOCK_LOAD_IN_MEMORY    400
-#define TAR_MAX_CONCURRENT_TASKS        4
+#define TAR_MAX_CONCURRENT_TASKS        6
 
 // Define structure of POSIX 'ustar' tar header.
 // Provided by libarchive.
@@ -95,7 +95,6 @@
 #import "FileHandlePool.h"
 
 static NSOperationQueue *taskQueue;
-static NSMutableDictionary *fileHandlePools;
 
 @interface NVHTarFile()
 
@@ -112,19 +111,13 @@ static NSMutableDictionary *fileHandlePools;
         taskQueue = [[NSOperationQueue alloc] init];
         [taskQueue setQualityOfService:NSQualityOfServiceUserInitiated];
         [taskQueue setMaxConcurrentOperationCount:TAR_MAX_CONCURRENT_TASKS];
-
-        fileHandlePools = [[NSMutableDictionary alloc] init];
     }
 }
 
 -(instancetype) initWithPath:(NSString *)filePath {
     self = [super initWithPath:filePath];
     if (self) {
-        _fileHandlePool = fileHandlePools[filePath];
-        if (_fileHandlePool == nil) {
-            _fileHandlePool = [[FileHandlePool alloc] initWithFilePath:filePath handleCount:TAR_MAX_CONCURRENT_TASKS * 2];
-            fileHandlePools[filePath] = _fileHandlePool;
-        }
+        _fileHandlePool = [[FileHandlePool alloc] initWithFilePath:filePath handleCount:TAR_MAX_CONCURRENT_TASKS * 2];
     }
     return self;
 }
@@ -356,30 +349,6 @@ static NSMutableDictionary *fileHandlePools;
                                                           contents:contents
                                                         attributes:nil]; //Write the file on filesystem
     } else if ([object isKindOfClass:[FileHandlePool class]]) {
-//        NSOutputStream *output = [NSOutputStream outputStreamToFileAtPath:path append:NO];
-//        [output open];
-//        NSStreamStatus status = output.streamStatus;
-//        NSError *error = output.streamError;
-//
-//        object = [(FileHandlePool *)object nextHandle];
-//        @synchronized (object) {
-//            [object seekToFileOffset:location];
-//
-//            unsigned long long maxSize = TAR_MAX_BLOCK_LOAD_IN_MEMORY * TAR_BLOCK_SIZE;
-//
-//            while (length > maxSize) {
-//                @autoreleasepool {
-//                    NSData *data = [object readDataOfLength:(NSUInteger)maxSize];
-//                    [output write:data.bytes maxLength:maxSize];
-//                    location += maxSize;
-//                    length -= maxSize;
-//                }
-//            }
-//            NSData *data = [object readDataOfLength:(NSUInteger)length];
-//            [output write:data.bytes maxLength:length];
-//        }
-//        [output close];
-
         NSError *writeError = nil;
         BOOL created = [@"" writeToFile:path atomically:YES encoding:NSASCIIStringEncoding error:&writeError];
         if (created) {

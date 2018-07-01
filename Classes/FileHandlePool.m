@@ -45,5 +45,11 @@
     return next;
 }
 
+- (void)dealloc
+{
+    for (NSFileHandle *handle in self.handles) {
+        [handle closeFile];
+    }
+}
 
 @end
