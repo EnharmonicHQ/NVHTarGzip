@@ -39,8 +39,8 @@
 #define TAR_NAME_SIZE                   100
 #define TAR_SIZE_POSITION               124
 #define TAR_SIZE_SIZE                   12
-#define TAR_MAX_BLOCK_LOAD_IN_MEMORY    200
-#define TAR_MAX_CONCURRENT_TASKS        50
+#define TAR_MAX_BLOCK_LOAD_IN_MEMORY    400
+#define TAR_MAX_CONCURRENT_TASKS        4
 
 // Define structure of POSIX 'ustar' tar header.
 // Provided by libarchive.
@@ -124,8 +124,6 @@ static NSMutableDictionary *fileHandlePools;
         if (_fileHandlePool == nil) {
             _fileHandlePool = [[FileHandlePool alloc] initWithFilePath:filePath handleCount:TAR_MAX_CONCURRENT_TASKS * 2];
             fileHandlePools[filePath] = _fileHandlePool;
-        } else {
-            NSInteger x = 1; // cache hit
         }
     }
     return self;
@@ -358,7 +356,32 @@ static NSMutableDictionary *fileHandlePools;
                                                           contents:contents
                                                         attributes:nil]; //Write the file on filesystem
     } else if ([object isKindOfClass:[FileHandlePool class]]) {
-        created = [[NSFileManager defaultManager] createFileAtPath:path contents:nil attributes:nil];
+//        NSOutputStream *output = [NSOutputStream outputStreamToFileAtPath:path append:NO];
+//        [output open];
+//        NSStreamStatus status = output.streamStatus;
+//        NSError *error = output.streamError;
+//
+//        object = [(FileHandlePool *)object nextHandle];
+//        @synchronized (object) {
+//            [object seekToFileOffset:location];
+//
+//            unsigned long long maxSize = TAR_MAX_BLOCK_LOAD_IN_MEMORY * TAR_BLOCK_SIZE;
+//
+//            while (length > maxSize) {
+//                @autoreleasepool {
+//                    NSData *data = [object readDataOfLength:(NSUInteger)maxSize];
+//                    [output write:data.bytes maxLength:maxSize];
+//                    location += maxSize;
+//                    length -= maxSize;
+//                }
+//            }
+//            NSData *data = [object readDataOfLength:(NSUInteger)length];
+//            [output write:data.bytes maxLength:length];
+//        }
+//        [output close];
+
+        NSError *writeError = nil;
+        BOOL created = [@"" writeToFile:path atomically:YES encoding:NSASCIIStringEncoding error:&writeError];
         if (created) {
             NSFileHandle *destinationFile = [NSFileHandle fileHandleForWritingAtPath:path];
             object = [(FileHandlePool *)object nextHandle];
@@ -377,6 +400,8 @@ static NSMutableDictionary *fileHandlePools;
                 [destinationFile writeData:[object readDataOfLength:(NSUInteger)length]];
             }
             [destinationFile closeFile];
+        } else {
+            NSLog(@"Error creating a file at %@ with error: %@", path, [writeError localizedDescription]);
         }
     }
     
