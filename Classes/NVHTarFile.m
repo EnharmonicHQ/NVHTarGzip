@@ -29,13 +29,14 @@
 #pragma mark - Definitions
 
 // Logging mode
-#define TAR_VERBOSE_LOG_MODE
+//#define TAR_VERBOSE_LOG_MODE
 #if !defined(DEBUG)
+// Never in release
 #undef TAR_VERBOSE_LOG_MODE
 #endif
 
 #if defined(TAR_VERBOSE_LOG_MODE) && !defined(DEBUG)
-#warning TAR_VERBOSE_LOG_MODE should not be defined in production code!
+#error TAR_VERBOSE_LOG_MODE should not be defined in production code!
 #endif
 
 // const definition
