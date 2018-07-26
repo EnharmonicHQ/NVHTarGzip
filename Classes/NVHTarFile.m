@@ -29,8 +29,14 @@
 #pragma mark - Definitions
 
 // Logging mode
-// Comment this line for production
-//#define TAR_VERBOSE_LOG_MODE
+#define TAR_VERBOSE_LOG_MODE
+#if !defined(DEBUG)
+#undef TAR_VERBOSE_LOG_MODE
+#endif
+
+#if defined(TAR_VERBOSE_LOG_MODE) && !defined(DEBUG)
+#warning TAR_VERBOSE_LOG_MODE should not be defined in production code!
+#endif
 
 // const definition
 #define TAR_BLOCK_SIZE                  512
@@ -150,7 +156,9 @@
                 @autoreleasepool {
                     NSString *name = [NVHTarFile nameForObject:object atOffset:location];
 #ifdef TAR_VERBOSE_LOG_MODE
-                    NSLog(@"UNTAR - file - %@", name);
+                    if (name.length > 0) {
+                        NSLog(@"UNTAR - file - %@", name);
+                    }
 #endif
                     NSString *filePath = [path stringByAppendingPathComponent:name]; // Create a full path from the name
                     
@@ -290,39 +298,77 @@
     return strtol(sizeBytes, NULL, 8); // Size is an octal number, convert to decimal
 }
 
-- (void)writeFileDataForObject:(id)object atLocation:(unsigned long long)location withLength:(unsigned long long)length atPath:(NSString *)path
+- (void)writeFileDataForObject:(id)object atLocation:(unsigned long long)inLocation withLength:(unsigned long long)inLength atPath:(NSString *)path
 {
-    BOOL created = NO;
+    __block unsigned long long location = inLocation;
+    __block unsigned long long length = inLength;
+
+    __block BOOL created = NO;
+    NSFileCoordinator *coordinator = [[NSFileCoordinator alloc] init];
+    __block BOOL failedCoordination = true;
+    NSError *coordinationError = nil;
+
+#ifdef TAR_VERBOSE_LOG_MODE
+    NSLog(@"UNTAR - Coordinating writing - %@", path);
+#endif
+
     if ([object isKindOfClass:[NSData class]]) {
         NSData *contents = [object subdataWithRange:NSMakeRange((NSUInteger)location, (NSUInteger)length)];
-        created = [[NSFileManager defaultManager] createFileAtPath:path
-                                                          contents:contents
-                                                        attributes:nil]; //Write the file on filesystem
-    } else if ([object isKindOfClass:[NSFileHandle class]]) {
-        created = [[NSFileManager defaultManager] createFileAtPath:path contents:nil attributes:nil];
-        if (created) {
-            NSFileHandle *destinationFile = [NSFileHandle fileHandleForWritingAtPath:path];
-            [object seekToFileOffset:location];
-            
-            unsigned long long maxSize = TAR_MAX_BLOCK_LOAD_IN_MEMORY * TAR_BLOCK_SIZE;
-            
-            while (length > maxSize) {
-                @autoreleasepool {
-                    [destinationFile writeData:[object readDataOfLength:(NSUInteger)maxSize]];
-                    location += maxSize;
-                    length -= maxSize;
-                }
-            }
-            [destinationFile writeData:[object readDataOfLength:(NSUInteger)length]];
-            [destinationFile closeFile];
-        }
-    }
-    
-    if (!created) {
+
+        [coordinator coordinateWritingItemAtURL:[NSURL fileURLWithPath:path]
+                                        options:NSFileCoordinatorWritingForReplacing
+                                          error:&coordinationError
+                                     byAccessor:^(NSURL * _Nonnull newURL) {
 #ifdef TAR_VERBOSE_LOG_MODE
-        NSLog(@"UNTAR - can't create file");
+                                         NSLog(@"UNTAR - Coordinated writing - %@ -> %@", path, newURL.path);
+#endif
+                                         failedCoordination = false;
+                                         created = [[NSFileManager defaultManager] createFileAtPath:path
+                                                                                           contents:contents
+                                                                                         attributes:nil]; // Write the file on filesystem
+                                     }];
+    } else if ([object isKindOfClass:[NSFileHandle class]]) {
+        [coordinator coordinateWritingItemAtURL:[NSURL fileURLWithPath:path]
+                                        options:NSFileCoordinatorWritingForReplacing
+                                          error:&coordinationError
+                                     byAccessor:^(NSURL * _Nonnull newURL) {
+#ifdef TAR_VERBOSE_LOG_MODE
+                                         NSLog(@"UNTAR - Coordinated writing - %@ -> %@", path, newURL.path);
+#endif
+                                         failedCoordination = false;
+                                         created = [[NSFileManager defaultManager] createFileAtPath:path contents:nil attributes:nil];
+                                         if (created) {
+                                             NSFileHandle *destinationFile = [NSFileHandle fileHandleForWritingAtPath:path];
+                                             [object seekToFileOffset:location];
+
+                                             unsigned long long maxSize = TAR_MAX_BLOCK_LOAD_IN_MEMORY * TAR_BLOCK_SIZE;
+
+                                             while (length > maxSize) {
+                                                 @autoreleasepool {
+                                                     [destinationFile writeData:[object readDataOfLength:(NSUInteger)maxSize]];
+                                                     location += maxSize;
+                                                     length -= maxSize;
+                                                 }
+                                             }
+                                             [destinationFile writeData:[object readDataOfLength:(NSUInteger)length]];
+                                             [destinationFile closeFile];
+                                         }
+                                     }];
+    }
+
+    if (failedCoordination) {
+#ifdef TAR_VERBOSE_LOG_MODE
+        NSLog(@"UNTAR - can't write file (file coordination) to %@ with error: %@.", path, coordinationError);
 #endif
     }
+
+    BOOL isDirectory = false;
+    if (!created && !([[NSFileManager defaultManager] fileExistsAtPath:path isDirectory:&isDirectory] && isDirectory)) {
+#ifdef TAR_VERBOSE_LOG_MODE
+        NSLog(@"UNTAR - can't create file %@", path);
+#endif
+    }
+
 }
 
 + (NSData *)dataForObject:(id)object inRange:(NSRange)range orLocation:(unsigned long long)location andLength:(unsigned long long)length
